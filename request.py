@@ -16,12 +16,12 @@ from random import shuffle
 
 
 #DEFAULT_OUTPUT_FILENAME = 'iter-results.xml'
-DEFAULT_OUTPUT_FILENAME = argv[5] + '.xml' 
+DEFAULT_OUTPUT_FILENAME = argv[5] + '.xml'
 DEFAULT_OUTPUT_FOLDER_NAME = 'results'
 DEFAULT_TILE_FILENAME = 'tile'
 
 def getLgnProbes(lgnPath,completePath):
-	'''Given the path of a file with the LGN and the path of the complete data file, 
+	'''Given the path of a file with the LGN and the path of the complete data file,
 	returns the list of probe indices and the total number of probes in the complete file.'''
 	lgn = []
 
@@ -56,7 +56,7 @@ def edge2str(t) :
 	return str(edge[0]) + ',' + str(edge[1])
 
 def pcim(execPath,lgnPath,completePath,processId,alpha=0.05,nIterations=100,subsetSize=1000) :
-	
+
 	# gets the LGN indices from the LGN network file, also returns the total number of probes from the 'complete' file
 	lgnProbes,nProbes = getLgnProbes(lgnPath,completePath)
 	allProbes = range(1,nProbes+1)
@@ -76,16 +76,16 @@ def pcim(execPath,lgnPath,completePath,processId,alpha=0.05,nIterations=100,subs
 		# indices of non-LGN nodes, shuffled in order to take different subset on each iteration
 		otherProbes = list(set(range(1,nProbes+1)) - set(lgnProbes))
 		shuffle(otherProbes)
-		
+
 		tileFile = open(tilePath,'w')
 		probeBag = list(otherProbes) # probes not in the LGN to be extracted
-	
+
 		while probeBag != [] :
 			subset,probeBag = probeBag[:subsetSize],probeBag[subsetSize:] # takes a subset of non-LGN indices
 			subset = subset + lgnProbes # adds the LGN to the subset
 
 			# if the subset size is smaller, just add some random nodes outside the Local Gene Network
-			if len(subset) < subsetSize : 
+			if len(subset) < subsetSize :
 				shuffle(otherProbes)
 				subset = subset + list(set(otherProbes).difference(set(subset)))[:(len(lgnProbes)+subsetSize-len(subset))]
 
@@ -93,12 +93,12 @@ def pcim(execPath,lgnPath,completePath,processId,alpha=0.05,nIterations=100,subs
 
 			#for x in subset :	# increase the node count for each element of the considered subset
 			#	nodeCount[x] += 1
-			
+
 			row = subsetToString(subset)
 			if probeBag != [] :
 				row += '\n'
 			tileFile.write(row)
-		
+
 		tileFile.close()
 
 		# execute the PC algorithm
@@ -107,7 +107,7 @@ def pcim(execPath,lgnPath,completePath,processId,alpha=0.05,nIterations=100,subs
 def postproc(pcResultFolder, pcimFolder, lgnFilePath) :
 
 	code = DEFAULT_OUTPUT_FILENAME
-	
+
 	genes_in_lgn, edges_in_lgn = pl.read_lgn(lgnFilePath)
 
 	list_of_expanded_network_file = pen.merge_different_pc_run(code, pcResultFolder)
@@ -118,8 +118,18 @@ def postproc(pcResultFolder, pcimFolder, lgnFilePath) :
 
 	expansion_list = IV.expansion_list()
 
-	expansion_filepath = helper.generate_filepath(pcimFolder, code)
-	we.write_expansion_list(expansion_filepath, expansion_list)
+    result_filename = os.path.splitext(xml_filename)[0] + ".csv"
+    result_filepath = helper.generate_filepath(pcimFolder, result_filename)
+    we.write_expansion_list(result_filepath, expansion_list)
+
+    result_PPV_filename = "%s%s" % \
+        (os.path.splitext(result_filename)[0], "_PPV.txt")
+    result_SE_filename = "%s%s" % \
+        (os.path.splitext(result_filename)[0], "_SE.txt")
+    result_PPV_filepath = helper.generate_filepath(pcimFolder, result_PPV_filename)
+    result_SE_filepath = helper.generate_filepath(pcimFolder, result_SE_filename)
+    we.write_statistical_result(result_PPV_filepath, IV.PPV)
+    we.write_statistical_result(result_SE_filepath, IV.SE)
 
 	# 2nd internal validation
 #	IV2 = InternalValidationRls(genes_in_tiles, blocks, genes_in_lgn, edges_in_lgn)

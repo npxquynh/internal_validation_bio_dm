@@ -202,8 +202,9 @@ class InternalValidation:
     def largest_frequency_list_extra(self, index_of_subLGN):
         max_freq = 0
         for key in self.list_extra:
-            if self.list_extra[key][index_of_subLGN] > max_freq:
-                max_freq = self.list_extra[key][index_of_subLGN]
+            if self.list_extra[key][index_of_subLGN + 2] > max_freq:
+                # print self.list_extra[key][index_of_subLGN + 2]
+                max_freq = self.list_extra[key][index_of_subLGN + 2]
 
         return max_freq
 
@@ -225,29 +226,34 @@ class InternalValidation:
                 self.FN[i][j] = 0
 
         # False Positive
-        # TODO: number or LGN genes
-        for i in range(0, nrows):
-            for key in self.list_extra:
-                max_freq = self.largest_frequency_list_extra(i)
-                equal_point = int(math.floor(max_freq * 100))
-
-                for j in range(equal_point, ncols):
-                    self.FP[i][j] = 1
+        f = [x / 100.0 for x in range(100)]
+        for key in self.list_extra:
+            for i in range(0, nrows):
+                for j in range(ncols):
+                    try:
+                        if self.list_extra[key][i+2] >= f[j]:
+                            self.FP[i][j] += 1
+                    except KeyError:
+                        pdb.set_trace()
 
     def statistical_result(self):
-        self.PPV = helper.divide_two_dim_array(self.TP,
-            helper.add_two_dim_array(self.TP, self.FP))
-        self.SE = helper.divide_two_dim_array(self.TP,
-            helper.add_two_dim_array(self.TP, self.FN))
+        TP = numpy.array(self.TP, dtype = numpy.float)
+        FP = numpy.array(self.FP, dtype = numpy.float)
+        FN = numpy.array(self.FN, dtype = numpy.float)
+
+        self.PPV = TP / (TP + FP)
+        self.SE = TP / (TP + FN)
 
     def calculate_cutoff_frequency(self):
         Y = numpy.mean(self.PPV, axis=0)
         X = numpy.mean(self.SE, axis=0)
         ones = [ 1 for i in range(100) ]
+
         dist = numpy.sqrt(numpy.square(numpy.subtract(X, ones)) +
             numpy.square(numpy.subtract(Y, ones)))
 
         self.cutoff_frequency = min(dist)
+        print "Cutoff Freq 1: %f" % self.cutoff_frequency
 
     def expansion_list(self):
         self.create_list_intra_extra()
